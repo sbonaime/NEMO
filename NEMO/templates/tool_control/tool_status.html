@@ -245,18 +245,20 @@
 				{% endif %}
 			{% endif %}
 		</form>
-		<hr>
-		<div class="row">
-			{% if tool.description %}
-			<div class="col-sm-6">
-				<p> {{tool.description| safe | linebreaks}} </p>
+		<div style="background-color: #f5f5f5 ; padding: 5px; ">
+
+			<div class="row">
+				{% if tool.description %}
+				<div class="col-sm-6">
+					<p> {{tool.description| safe | linebreaks}} </p>
+				</div>
+				{% endif %}
+				{% if tool.image %}
+				<div class="col-sm-4">
+					<center><p><img src="{{ tool.image.url }}" style="max-width:300px ;max-height:300px" ></p></center>
+				</div>
+				{% endif %}
 			</div>
-			{% endif %}
-			{% if tool.image %}
-			<div class="col-sm-4">
-				<p><img src="{{ tool.image.url }}" width ="100%" ></p>
-			</div>
-			{% endif %}
 		</div>
 	
 		<div style="height:150px">{# Spacer #}</div>

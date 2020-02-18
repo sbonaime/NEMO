@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django import template
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse, NoReverseMatch
 from django.utils import timezone
@@ -85,3 +86,7 @@ def app_version() -> str:
 			dist_version = None
 			pass
 	return dist_version
+	
+@register.simple_tag
+def get_setting(name):
+    return getattr(settings, name, "")
