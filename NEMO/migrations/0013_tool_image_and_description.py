@@ -13,11 +13,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='tool',
             name='_description',
-            field=models.TextField(blank=True, default='', help_text='HTML syntax could be used', null=True),
+            field=models.TextField(blank=True, db_column='description', default='', help_text='HTML syntax could be used', null=True),
         ),
         migrations.AddField(
             model_name='tool',
             name='_image',
-            field=models.ImageField(blank=True, help_text='An image that represent the tool. Maximum width is 500px', upload_to='tool_image'),
+            field=models.ImageField(blank=True, db_column='image', help_text='An image that represent the tool. Maximum width and height are 500px', upload_to='tool_image'),
         ),
     ]
