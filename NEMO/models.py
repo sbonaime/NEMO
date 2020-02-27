@@ -230,8 +230,8 @@ class Tool(models.Model):
 	name = models.CharField(max_length=100, unique=True)
 	parent_tool = models.ForeignKey('Tool', related_name="tool_children_set", null=True, blank=True, help_text='Select a parent tool to allow alternate usage', on_delete=models.CASCADE)
 	visible = models.BooleanField(default=True, help_text="Specifies whether this tool is visible to users.")
-	_description = models.TextField(db_column="description", null=True, blank=True, default='', help_text="HTML syntax could be used")
-	_serial = models.CharField(db_column="serial", null=True, blank=True, max_length=100, default='', help_text="Serial Number")
+	_description = models.TextField(db_column="description", null=True, blank=True, help_text="HTML syntax could be used")
+	_serial = models.CharField(db_column="serial", null=True, blank=True, max_length=100, help_text="Serial Number")
 	_image = models.ImageField(db_column="image", upload_to=get_tool_image_filename, blank=True, help_text="An image that represent the tool. Maximum width and height are 500px")
 	_category = models.CharField(db_column="category", null=True, blank=True, max_length=1000, help_text="Create sub-categories using slashes. For example \"Category 1/Sub-category 1\".")
 	_operational = models.BooleanField(db_column="operational", default=False, help_text="Marking the tool non-operational will prevent users from using the tool.")
@@ -282,7 +282,7 @@ class Tool(models.Model):
 
 	@property
 	def serial(self):
-		return self.parent_tool.description if self.is_child_tool() else self._serial
+		return self.parent_tool.serial if self.is_child_tool() else self._serial
 
 	@serial.setter
 	def serial(self, value):
@@ -1333,6 +1333,7 @@ class PhysicalAccessLevel(models.Model):
 			(WEEKENDS, "Weekends"),
 		)
 	schedule = models.IntegerField(choices=Schedule.Choices)
+	allow_staff_access = models.BooleanField(blank=False, null=False, default=False, help_text="Check this box to allow access to Staff users without explicitly granting them access")
 
 	def accessible(self):
 		now = timezone.localtime(timezone.now())
