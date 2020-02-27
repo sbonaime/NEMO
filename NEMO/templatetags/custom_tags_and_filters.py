@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.conf import settings
 from django import template
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse, NoReverseMatch
@@ -26,6 +27,9 @@ def is_soon(time):
 def to_int(value):
 	return int(value)
 
+@register.simple_tag
+def get_setting(name):
+    return getattr(settings, name, "")
 
 @register.filter
 def json_search_base(items_to_search):
