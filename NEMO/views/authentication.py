@@ -11,7 +11,7 @@ from django.urls import reverse, resolve
 from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods, require_GET
-from ldap3 import Tls, Server, Connection, AUTO_BIND_TLS_BEFORE_BIND, SIMPLE, AUTO_BIND_NO_TLS, ANONYMOUS
+from ldap3 import Tls, Server, Connection, AUTO_BIND_TLS_BEFORE_BIND, SIMPLE, AUTO_BIND_NO_TLS, ANONYMOUS, SIMPLE
 from ldap3.core.exceptions import LDAPBindError, LDAPException
 
 from NEMO.models import User
@@ -69,6 +69,52 @@ class NginxKerberosAuthorizationHeaderAuthenticationBackend(ModelBackend):
 			return None
 		return b64decode(pieces[1]).decode().partition(':')[0]
 
+
+class LDAP_IPGP_AuthenticationBackend(ModelBackend):
+	""" This class provides LDAP authentication against an LDAP or Active Directory server. """
+
+	@method_decorator(sensitive_post_parameters('password'))
+	def authenticate(self, request, username=None, password=None, **keyword_arguments):
+		if not username or not password:
+			return None
+
+		# The user must exist in the database
+		try:
+			user = User.objects.get(username=username)
+		except User.DoesNotExist:
+			auth_logger.warning(f"Username {username} attempted to authenticate with LDAP, but that username does not exist in the NEMO database. The user was denied access.")
+			print("Username "+username+" attempted to authenticate with LDAP, but that username does not exist in the NEMO database. The user was denied access.")
+			return None
+
+		# The user must be marked active.
+		if not user.is_active:
+			auth_logger.warning(f"User {username} successfully authenticated with LDAP, but that user is marked inactive in the NEMO database. The user was denied access.")
+			print("User "+username+" successfully authenticated with LDAP, but that user is marked inactive in the NEMO database. The user was denied access.")
+			return None
+
+		for server in settings.LDAP_SERVERS:
+			try:
+				s = Server('ldapserver.ipgp.fr', port=389, use_ssl=False)
+				c = Connection(s)  # define an ANONYMOUS connection
+				if not c.bind():
+					print('error in bind', c.result)
+				c.search('ou=people,dc=ipgp,dc=jussieu,dc=fr' , '(uid='+username+')',attributes=['cn' ])
+				print(username)
+				print(user)
+				nom_prenom_pour_login = c.response[0]['attributes']['cn'][0]
+				print(nom_prenom_pour_login)
+				bind_connection = Connection(s, 'cn='+nom_prenom_pour_login+',ou=people,dc=ipgp,dc=jussieu,dc=fr', password, auto_bind=AUTO_BIND_NO_TLS, authentication=SIMPLE)
+				bind_connection.unbind()
+				# At this point the user successfully authenticated to at least one LDAP server.
+				return user
+			except LDAPBindError as e:
+				auth_logger.warning(f"User {username} attempted to authenticate with LDAP, but entered an incorrect password. The user was denied access.")
+				pass  # When this error is caught it means the username and password were invalid against the LDAP server.
+			except LDAPException as e:
+				exception(e)
+
+		# The user did not successfully authenticate to any of the LDAP servers.
+		return None
 
 class LDAPAuthenticationBackend(ModelBackend):
 	""" This class provides LDAP authentication against an LDAP or Active Directory server. """
@@ -141,7 +187,6 @@ class LDAPAuthenticationBackend(ModelBackend):
 			for error in errors:
 				auth_logger.warning(error)
 			return None
-
 
 @require_http_methods(['GET', 'POST'])
 @sensitive_post_parameters('password')
