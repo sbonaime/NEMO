@@ -1,4 +1,6 @@
 from NEMO.models import User
+from NEMO.utilities import get_tool_image_filename
+from django.conf import settings
 
 
 def lock_selected_interlocks(model_admin, request, queryset):
@@ -30,10 +32,17 @@ def duplicate_tool_configuration(model_admin, request, queryset):
 			old_qualified_users = User.objects.filter(qualifications__id=tool.pk).distinct()
 			tool.pk = None
 			tool.interlock = None
-			tool.visible = False
-			tool.operational = False
-			tool.name = 'Copy of '+tool.name
-			tool.image = None
+			tool.visible = True
+			tool.operational = True
+			tool.name = tool.name+ ' copy'
+			
+			#Duplicate image
+			if tool.image:
+				from PIL import Image
+				img: Image = Image.open(tool.image)
+				img.save(settings.MEDIA_ROOT+'/'+get_tool_image_filename(tool, tool.image.url))
+				tool.image = get_tool_image_filename(tool, tool.image.url)
+
 #			tool.description = None
 			tool.serial = None
 			tool.save()
