@@ -51,3 +51,15 @@ def duplicate_tool_configuration(model_admin, request, queryset):
 			tool.backup_owners.set(old_backup_users)
 			for user in old_qualified_users:
 				user.qualifications.add(tool)
+
+def disable_tools(model_admin, request, queryset):
+	for tool in queryset:
+		tool.visible = False
+		tool.operational = False
+		tool.save()
+
+def enable_tools(model_admin, request, queryset):
+	for tool in queryset:
+		tool.visible = True
+		tool.operational = True
+		tool.save()
