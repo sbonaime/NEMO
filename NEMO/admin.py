@@ -7,7 +7,7 @@ from django.contrib.auth.models import Permission
 from django.db.models.fields.files import FieldFile
 
 from NEMO.actions import lock_selected_interlocks, synchronize_with_tool_usage, unlock_selected_interlocks, \
-	duplicate_tool_configuration
+	duplicate_tool_configuration, disable_tools, enable_tools
 from NEMO.models import Account, ActivityHistory, Alert, Area, AreaAccessRecord, Comment, Configuration, \
 	ConfigurationHistory, Consumable, ConsumableCategory, ConsumableWithdraw, ContactInformation, \
 	ContactInformationCategory, Customization, Door, Interlock, InterlockCard, LandingPageChoice, MembershipHistory, \
@@ -129,7 +129,7 @@ class ToolAdmin(admin.ModelAdmin):
 	list_display = ('name_display', '_category', 'visible', 'operational_display', 'problematic', 'is_configurable')
 	search_fields = ('name', '_description', '_serial')
 	list_filter = ('visible', '_operational', '_category', '_location')
-	actions = [duplicate_tool_configuration]
+	actions = [duplicate_tool_configuration, enable_tools, disable_tools]
 	form = ToolAdminForm
 	fieldsets = (
 		(None, {'fields': ('name', 'parent_tool', '_category', 'qualified_users', '_post_usage_questions'),}),
