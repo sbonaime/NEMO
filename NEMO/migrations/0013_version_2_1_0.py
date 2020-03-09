@@ -18,23 +18,16 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='tool',
             name='_serial',
-<<<<<<< HEAD
             field=models.CharField(blank=True, db_column='serial', help_text='Serial Number', max_length=100, null=True),
-=======
-            field=models.CharField(blank=True, db_column='serial', default='', help_text='Serial Number', max_length=100, null=True),
->>>>>>> fix migrations pb
         ),
         migrations.AddField(
             model_name='tool',
             name='_image',
             field=models.ImageField(blank=True, db_column='image', help_text='An image that represent the tool. Maximum width and height are 500px', upload_to=NEMO.utilities.get_tool_image_filename),
-<<<<<<< HEAD
         ),
         migrations.AddField(
             model_name='physicalaccesslevel',
             name='allow_staff_access',
             field=models.BooleanField(default=False, help_text='Check this box to allow access to Staff users without explicitly granting them access'),
-=======
->>>>>>> fix migrations pb
         ),
     ]
