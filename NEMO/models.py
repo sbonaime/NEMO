@@ -573,7 +573,11 @@ class Tool(models.Model):
 
 	def comments(self):
 		unexpired = Q(expiration_date__isnull=True) | Q(expiration_date__gt=timezone.now())
-		return self.parent_tool.comment_set.filter(visible=True).filter(unexpired) if self.is_child_tool() else self.comment_set.filter(visible=True).filter(unexpired)
+		return self.parent_tool.comment_set.filter(visible=True, staff_only=False).filter(unexpired) if self.is_child_tool() else self.comment_set.filter(visible=True, staff_only=False).filter(unexpired)
+
+	def staff_only_comments(self):
+		unexpired = Q(expiration_date__isnull=True) | Q(expiration_date__gt=timezone.now())
+		return self.parent_tool.comment_set.filter(visible=True, staff_only=True).filter(unexpired) if self.is_child_tool() else self.comment_set.filter(visible=True, staff_only=True).filter(unexpired)
 
 	def required_resource_is_unavailable(self):
 		return self.parent_tool.required_resource_set.filter(available=False).exists() if self.is_child_tool() else self.required_resource_set.filter(available=False).exists()
@@ -874,6 +878,9 @@ class Reservation(CalendarDisplay):
 	def has_not_ended(self):
 		return False if self.end < timezone.now() else True
 
+	def has_not_started(self):
+		return False if self.start <= timezone.now() else True
+
 	def save_and_notify(self):
 		self.save()
 		from NEMO.views.calendar import send_user_cancelled_reservation_notification, send_user_created_reservation_notification
@@ -951,6 +958,7 @@ class ConsumableWithdraw(models.Model):
 
 
 class InterlockCard(models.Model):
+	name = models.CharField(max_length=100, blank=True, null=True)
 	server = models.CharField(max_length=100)
 	port = models.PositiveIntegerField()
 	number = models.PositiveIntegerField(blank=True, null=True)
@@ -965,7 +973,8 @@ class InterlockCard(models.Model):
 		ordering = ['server', 'number']
 
 	def __str__(self):
-		return str(self.server) + (', card ' + str(self.number) if self.number else '')
+		card_name = self.name + ': ' if self.name else ''
+		return card_name + str(self.server) + (', card ' + str(self.number) if self.number else '')
 
 
 class Interlock(models.Model):
@@ -1092,7 +1101,7 @@ def auto_delete_file_on_tool_change(sender, instance: Tool, **kwargs):
 	except Tool.DoesNotExist:
 		return False
 
-	if old_file :
+	if old_file:
 		new_file = instance.image
 		if not old_file == new_file:
 			if os.path.isfile(old_file.path):
@@ -1181,6 +1190,7 @@ class Comment(models.Model):
 	hide_date = models.DateTimeField(blank=True, null=True, help_text="The date when this comment was hidden. If it is still visible or has expired then this date should be empty.")
 	hidden_by = models.ForeignKey(User, null=True, blank=True, related_name="hidden_comments", on_delete=models.SET_NULL)
 	content = models.TextField()
+	staff_only = models.BooleanField(default=False)
 
 	class Meta:
 		ordering = ['-creation_date']
@@ -1414,8 +1424,20 @@ class SafetyIssue(models.Model):
 		return reverse('update_safety_issue', args=[self.id])
 
 
+class AlertCategory(models.Model):
+	name = models.CharField(max_length=200)
+
+	class Meta:
+		ordering = ['name']
+		verbose_name_plural = "Alert categories"
+
+	def __str__(self):
+		return self.name
+
+
 class Alert(models.Model):
 	title = models.CharField(blank=True, max_length=100)
+	category = models.CharField(blank=True, max_length=200,	help_text="A category/type for this alert.")
 	contents = models.CharField(max_length=500)
 	creation_time = models.DateTimeField(default=timezone.now)
 	creator = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
@@ -1423,6 +1445,8 @@ class Alert(models.Model):
 	expiration_time = models.DateTimeField(null=True, blank=True, help_text='The alert can be deleted after the expiration time is reached.')
 	user = models.ForeignKey(User, null=True, blank=True, related_name='alerts', help_text='The alert will be visible for this user. The alert is visible to all users when this is empty.', on_delete=models.CASCADE)
 	dismissible = models.BooleanField(default=False, help_text="Allows the user to delete the alert. This is only valid when the 'user' field is set.")
+	expired = models.BooleanField(default=False, help_text="Indicates the alert has expired and won't be shown anymore")
+	deleted = models.BooleanField(default=False, help_text="Indicates the alert has been deleted and won't be shown anymore")
 
 	class Meta:
 		ordering = ['-debut_time']
