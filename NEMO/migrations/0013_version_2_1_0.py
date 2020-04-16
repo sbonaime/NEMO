@@ -36,6 +36,7 @@ class Migration(migrations.Migration):
             field=models.BooleanField(default=False, help_text='Check this box to allow access to Staff users without explicitly granting them access'),
         ),
 <<<<<<< HEAD
+<<<<<<< HEAD
         migrations.CreateModel(
             name='AlertCategory',
             fields=[
@@ -62,6 +63,8 @@ class Migration(migrations.Migration):
             name='expired',
             field=models.BooleanField(default=False, help_text="Indicates the alert has expired and won't be shown anymore"),
         ),
+=======
+>>>>>>> fix migrations pb
 =======
 >>>>>>> fix migrations pb
     ]
