@@ -111,11 +111,7 @@ class LDAP_IPGP_AuthenticationBackend(ModelBackend):
 			except LDAPBindError as e:
 				auth_logger.warning(f"User {username} attempted to authenticate with LDAP, but entered an incorrect password. The user was denied access.")
 				pass  # When this error is caught it means the username and password were invalid against the LDAP server.
-<<<<<<< HEAD
 			except LDAPException as e:
-=======
-			except LDAPExceptionError as e:
->>>>>>> IPGP authentification
 				exception(e)
 
 		# The user did not successfully authenticate to any of the LDAP servers.
