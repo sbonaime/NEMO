@@ -31,7 +31,7 @@ def enable_tool(request):
 	response = check_policy_to_enable_tool(tool, operator=customer, user=customer, project=project, staff_charge=False)
 	if response.status_code != HTTPStatus.OK:
 		dictionary = {
-			'message': 'You are not authorized to enable this tool. {}'.format(response),
+			'message': 'You are not authorized to enable this tool. {}'.format(response.content.decode()),
 			'delay': 10,
 		}
 		return render(request, 'kiosk/acknowledgement.html', dictionary)
@@ -285,11 +285,15 @@ def kiosk(request, location=None):
 @require_GET
 @disable_session_expiry_refresh
 def kiosk_occupancy(request):
-	area = request.GET.get('occupancy')
-	if area is None or not Area.objects.filter(name=area).exists():
+	area_name = request.GET.get('occupancy')
+	if area_name is None:
+		return HttpResponse()
+	try:
+		area = Area.objects.get(name=area_name)
+	except Area.DoesNotExist:
 		return HttpResponse()
 	dictionary = {
 		'area': area,
-		'occupants': AreaAccessRecord.objects.filter(area__name=area, end=None, staff_charge=None).prefetch_related('customer'),
+		'occupants': AreaAccessRecord.objects.filter(area__name=area.name, end=None, staff_charge=None).prefetch_related('customer'),
 	}
 	return render(request, 'kiosk/occupancy.html', dictionary)

@@ -81,39 +81,44 @@ def get_month_timeframe(date=None):
 	return first_of_the_month, last_of_the_month
 
 
-def extract_times(parameters, input_timezone=None):
+def extract_times(parameters, input_timezone=None, start_required=True, end_required=True):
 	"""
 	Extract the "start" and "end" parameters from an HTTP request while performing a few logic validation checks.
 	The function assumes the UNIX timestamp is in the local timezone. Use input_timezone to specify the timezone.
 	"""
+	start, end, new_start, new_end = None, None, None, None
 	try:
 		start = parameters['start']
 	except:
-		raise Exception("The request parameters did not contain a start time.")
+		if start_required:
+			raise Exception("The request parameters did not contain a start time.")
 
 	try:
 		end = parameters['end']
 	except:
-		raise Exception("The request parameters did not contain an end time.")
+		if end_required:
+			raise Exception("The request parameters did not contain an end time.")
 
 	try:
-		start = float(start)
-		start = datetime.utcfromtimestamp(start)
-		start = localize(start, input_timezone)
+		new_start = float(start)
+		new_start = datetime.utcfromtimestamp(new_start)
+		new_start = localize(new_start, input_timezone)
 	except:
-		raise Exception("The request parameters did not have a valid start time.")
+		if start or start_required:
+			raise Exception("The request parameters did not have a valid start time.")
 
 	try:
-		end = float(end)
-		end = datetime.utcfromtimestamp(end)
-		end = localize(end, input_timezone)
+		new_end = float(end)
+		new_end = datetime.utcfromtimestamp(new_end)
+		new_end = localize(new_end, input_timezone)
 	except:
-		raise Exception("The request parameters did not have a valid end time.")
+		if end or end_required:
+			raise Exception("The request parameters did not have a valid end time.")
 
-	if end < start:
+	if start and end and start_required and end_required and new_end < new_start:
 		raise Exception("The request parameters have an end time that precedes the start time.")
 
-	return start, end
+	return new_start, new_end
 
 
 def extract_date(date):
@@ -210,6 +215,7 @@ def get_task_image_filename(task_images, filename):
 	ext = os.path.splitext(filename)[1]
 	return f"task_images/{year}/{tool_name}/{date}_{tool_name}_{number}{ext}"
 
+
 def get_tool_image_filename(tool, filename):
 	from django.template.defaultfilters import slugify
 	tool_name = slugify(tool)
@@ -219,16 +225,21 @@ def get_tool_image_filename(tool, filename):
 
 def resize_image(image: InMemoryUploadedFile, max: int, quality=85) -> InMemoryUploadedFile:
 	""" Returns a resized image based on the given maximum size """
-	img: Image = Image.open(image)
-	if img.size[0] > img.size[1]:
-		width_ratio = (max / float(img.size[0]))
-		height = int((float(img.size[1]) * float(width_ratio)))
-		img = img.resize((max, height), Image.ANTIALIAS)
-	else:
-		height_ratio = (max / float(img.size[1]))
-		width = int((float(img.size[0]) * float(height_ratio)))
-		img = img.resize((width, max), Image.ANTIALIAS)
-	buffer = BytesIO()
-	img.save(fp=buffer, format='PNG', quality=quality)
-	resized_image = ContentFile(buffer.getvalue())
-	return InMemoryUploadedFile(resized_image,'ImageField', "%s.png" %image.name, 'image/png', resized_image.tell(), None)
+	with Image.open(image) as img:
+		width, height = img.size
+		# no need to resize if width or height is already less than the max
+		if width <= max or height <= max:
+			return image
+		if width > height:
+			width_ratio = (max / float(width))
+			new_height = int((float(height) * float(width_ratio)))
+			img = img.resize((max, new_height), Image.ANTIALIAS)
+		else:
+			height_ratio = (max / float(height))
+			new_width = int((float(width) * float(height_ratio)))
+			img = img.resize((new_width, max), Image.ANTIALIAS)
+		with BytesIO() as buffer:
+			img.save(fp=buffer, format='PNG', quality=quality)
+			resized_image = ContentFile(buffer.getvalue())
+	file_name_without_ext = os.path.splitext(image.name)[0]
+	return InMemoryUploadedFile(resized_image, 'ImageField', "%s.png" %file_name_without_ext, 'image/png', resized_image.tell(), None)
